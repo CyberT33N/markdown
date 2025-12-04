@@ -362,7 +362,7 @@ const languageToFileExtension = {
  * Extracts lintable code blocks from Markdown text.
  * @param {string} sourceText The text of the file.
  * @param {string} filename The filename of the file.
- * @returns {Array<{ filename: string, text: string }>} Source code blocks to lint.
+ * @returns {Array<{ filename: string, text: string, physicalFilename?: string }>} Source code blocks to lint.
  */
 function preprocess(sourceText, filename) {
 	const text = sourceText.startsWith(BOM) ? sourceText.slice(1) : sourceText;
@@ -444,6 +444,9 @@ function preprocess(sourceText, filename) {
 			fileNameFromMeta(block) ?? `${index}.${fileExtension}`;
 		const blockText = [...block.comments, block.value, ""].join("\n");
 
+		/** @type {string | undefined} */
+		let physicalFilename;
+
 		if (processorOptions.materializeCodeBlocks) {
 			/*
 			 * Best-effort: if materialization fails, it's better to surface the
@@ -451,12 +454,18 @@ function preprocess(sourceText, filename) {
 			 * tempDir, etc.) than to silently continue in a half-configured
 			 * state.
 			 */
-			materializeCodeBlock(filename, index, virtualFilename, blockText);
+			physicalFilename = materializeCodeBlock(
+				filename,
+				index,
+				virtualFilename,
+				blockText,
+			);
 		}
 
 		return {
 			filename: virtualFilename,
 			text: blockText,
+			...(physicalFilename && { physicalFilename }),
 		};
 	});
 }
